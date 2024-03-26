@@ -10,11 +10,10 @@ from bs4 import BeautifulSoup
 
 class Scraper:
     def __init__(self, args):
-
         self.args = args
         self.base_url = args.url
-        
         self.df = None
+
         if not os.path.exists('cache'):
             os.mkdir('cache')
         if not os.path.exists('docs'):
@@ -90,13 +89,14 @@ class Scraper:
     def page_crawling(self, page_url):
         response = requests.get(page_url)
         soup = BeautifulSoup(response.content, 'html.parser')
-        # self.get_docs(soup)
+        if self.args.docs:
+            self.get_docs(soup)
         
         try:
             result = self.get_content(soup)
         except Exception as e:
             print(e, page_url)
-            result = None
+            result = ""
         return result
     
     
@@ -158,11 +158,18 @@ class Scraper:
         for doc in docs:
             file_url = self.base_url + doc.attrs['href']
             file_name = f'./docs/{doc.getText().strip()}'
-            wget.download(file_url, out=file_name)
+            if not os.path.exists(file_name):
+                wget.download(file_url, out=file_name)
+
+
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--url","-l", type=str, help="please source url", required=True)
+    parser.add_argument("--docs", "-d", action='store_true', help="docs download")
+    
     args = parser.parse_args()
     
     s = Scraper(args)
