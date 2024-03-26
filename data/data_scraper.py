@@ -14,7 +14,7 @@ class Scraper:
     def __init__(self, args):
         self.args = args
         self.base_url = args.url
-        self.num_thread = args.num_thread
+        self.num_workers = args.num_workers
         self.page_step = args.page_step
         
         self.df = None
@@ -92,13 +92,13 @@ class Scraper:
             'url' : url_list
         })
             
-        # # 각 page 크롤링 
-        # content_list = []
-        # for url in temp_df['url']:
-        #     content = self.page_scraping(url)
-        #     content_list.append(content)
+        # 각 page 크롤링 
+        content_list = []
+        for url in temp_df['url']:
+            content = self.page_scraping(url)
+            content_list.append(content)
             
-        # temp_df['content'] = content_list
+        temp_df['content'] = content_list
 
         return temp_df
 
@@ -184,7 +184,7 @@ class Scraper:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--url","-l", type=str, help="data source url", required=True)
-    parser.add_argument("--num_thread","-n", type=int, help="num_thread", default=1)
+    parser.add_argument("--num_workers","-n", type=int, help="num_workers", default=1)
     parser.add_argument("--page_step","-p", type=int, help="page_step", default=10)
     parser.add_argument("--docs", "-d", action='store_true', help="docs download")
     
