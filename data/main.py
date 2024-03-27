@@ -1,5 +1,5 @@
 import argparse
-from data_scraper import Scraper
+from scraper import Scraper
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
