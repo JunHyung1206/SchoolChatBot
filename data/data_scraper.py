@@ -2,10 +2,10 @@ import os
 import re
 import requests
 import wget
-import argparse
 import pandas as pd
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
+from utils import remove_html_tags, html_table_to_markdown
 
 MAX_RETRIES = 3
 
@@ -69,8 +69,6 @@ class Scraper:
             self.df = pd.concat([self.df, step_df])
             self.df.reset_index(inplace=True, drop=True)
             self.df.to_csv(f'./cache/{file_name}_cache.csv', encoding='utf8', index=False)
-
-            print(self.df)
         self.df.reset_index(inplace=True, drop=True)
 
     def single_thread_scraping(self, page_num):
@@ -126,7 +124,6 @@ class Scraper:
 
     def page_scraping(self, page_url):
         response = requests.get(page_url)
-        print(response)
         soup = BeautifulSoup(response.content, 'html.parser')
         if self.args.docs:
             self.get_docs(soup)
@@ -139,60 +136,21 @@ class Scraper:
             return ""
         return result
     
-    
-    
-    def html_table_to_markdown(self, table):
-        rows = table.find_all('tr')
-
-        markdown_table = ''
-
-        if len(rows) == 1:
-            cells = rows[0].find_all(['th', 'td'])
-            if len(cells) == 1:
-                return str(table)
-
-        for idx, row in enumerate(rows):
-            cells = row.find_all(['th', 'td'])
-            row_data = [cell.get_text().strip() for cell in cells]
-            markdown_table += '| ' + ' | '.join(row_data) + ' |\n'
-            if idx == 0:
-                markdown_table += '| ' + ':-- | ' * len(cells) + '\n'
-        return markdown_table
-    
-    
     def get_content(self, soup):
-        content = soup.select(".board-contents")[0] # string 내용 뽑기
-        # table 찾기
+        content = soup.select(".board-contents")[0]
         tables = content.select(".board-contents table")
-        
         content = str(content)
-        
+
         for table in tables:
-            markdown_table = self.html_table_to_markdown(table)
-            s1 = re.search('<table[^>]+>',content)
-            s2 = re.search('</table>',content)
+            markdown_table = html_table_to_markdown(table)
+            s1 = re.search('<table[^>]+>', content)
+            s2 = re.search('</table>', content)
             content = content.replace(content[s1.start():s2.end()], markdown_table)
 
-
-        # p 태그 처리
-        html_text = re.sub(r'<p\s*>', '', content)
-        html_text = re.sub(r'</p\s*>', '\n', html_text)
-
-        # br 태그 처리
-        html_text = re.sub(r'<br\s*/?\s*>', '\n', html_text)
-
-        # 나머지 태그 처리
-        content_text = BeautifulSoup(html_text, 'html.parser').getText(separator=" ")
-
-
-        # 이후 후처리
-        content_text = re.sub(r'\xa0+',' ',content_text)
-        content_text = re.sub(r'\r?\n *','\n',content_text)
-        content_text = re.sub(r'\n *\n+','\n\n',content_text)
-        content_text = re.sub(r'\ +',' ',content_text).strip()
-
+        content_text = remove_html_tags(content)
         return content_text
     
+
     def get_docs(self, soup):
         docs = soup.select("a.file-down-btn")
         for doc in docs:
@@ -200,19 +158,3 @@ class Scraper:
             file_name = f'./docs/{doc.getText().strip()}'
             if not os.path.exists(file_name):
                 wget.download(file_url, out=file_name)
-
-
-
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--url","-l", type=str, help="data source url", required=True)
-    parser.add_argument("--num_workers","-n", type=int, help="num_workers", default=1)
-    parser.add_argument("--page_step","-p", type=int, help="page_step", default=10)
-    parser.add_argument("--docs", "-d", action='store_true', help="docs download")
-    
-    args = parser.parse_args()
-    
-    s = Scraper(args)
-    s.scraping()
