@@ -3,12 +3,12 @@ import re
 import requests
 import wget
 import argparse
+
+
 import pandas as pd
-import multiprocessing as mp
 
 from bs4 import BeautifulSoup
-
-
+from multiprocessing import Pool 
 
 class Scraper:
     def __init__(self, args):
@@ -26,31 +26,44 @@ class Scraper:
 
     def scraping(self):
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        
         if os.path.exists(f'./cache/{file_name}_cache.csv'):
             self.df = pd.read_csv(f'./cache/{file_name}_cache.csv', encoding='utf8')
         else:
             self.df = pd.DataFrame(columns = ['title','category','date', 'url', 'content'])
         
+        total_page_step = self.page_step * self.num_workers
+        # 공지사항이 포함된 것은 제외
+        page_num = max(len(self.df) - 10, 0) // total_page_step * total_page_step
+
         
-        page_num = len(self.df)//self.page_step * self.page_step
-        
+        if page_num > 0:
+            self.df = self.df[:page_num + 10] # 겹치는 항목 제외
+
         while(True):
-            
+            print(page_num)
             # TODO: thread 분기 위치
             try:
-                temp_df = self.single_thread_scraping(page_num)
+                with Pool(4) as pool:
+                    singleThread_dfs = pool.map(self.single_thread_scraping, [page_num + i * self.page_step for i in range(self.num_workers)])
+                    pool.close()
+                    pool.join()
+
             except Exception as e:
                 print("An error occurred:", e)
                 continue
-            
-            if len(temp_df) == 0:
+
+    
+            step_df = pd.DataFrame(columns = ['title','category','date', 'url', 'content'])
+            for sdf in singleThread_dfs:
+                step_df = pd.concat([step_df,sdf])
+
+            if len(step_df) == 0:
                 break
             
             # TODO: Join의 위치
             # temp_df concat 후 후처리
-            page_num += self.page_step
-            self.df = pd.concat([self.df,temp_df])
+            page_num += total_page_step
+            self.df = pd.concat([self.df,step_df])
             self.df.reset_index(inplace = True, drop=True)
             self.df.to_csv(f'./cache/{file_name}_cache.csv',encoding = 'utf8',index= True,index_label='id')
             
@@ -59,47 +72,51 @@ class Scraper:
     
 
     def single_thread_scraping(self, page_num):
-        list_url = self.base_url + f'?mode=list&&articleLimit={self.page_step}&article.offset={page_num}'
-        response = requests.get(list_url)
+        try:
+            list_url = self.base_url + f'?mode=list&&articleLimit={self.page_step}&article.offset={page_num}'
+            response = requests.get(list_url)
 
-        if response.status_code != 200:
-            print(response.status_code)
-            raise Exception("Failed to fetch the page.")
+            if response.status_code != 200:
+                print(response.status_code)
+                raise Exception("Failed to fetch the page.")
 
-        page_index = 10 if page_num != 0 else 0
+            page_index = 10 if page_num != 0 else 0
 
-        soup = BeautifulSoup(response.content, 'html.parser')
-        title_tags = soup.select('table>tbody>tr>td.title>a')[page_index:]
-        category_tags = soup.select('table>tbody>tr>td.category')[page_index:]
-        date_tags = soup.select('table>tbody>tr>td.date')[page_index:]
+            soup = BeautifulSoup(response.content, 'html.parser')
+            title_tags = soup.select('table>tbody>tr>td.title>a')[page_index:]
+            category_tags = soup.select('table>tbody>tr>td.category')[page_index:]
+            date_tags = soup.select('table>tbody>tr>td.date')[page_index:]
 
-        # 공지사항은 제외
-        title_list = ['']*len(title_tags)
-        category_list = ['']*len(category_tags)
-        date_list = ['']*len(date_tags)
-        url_list = ['']*len(title_tags)
+            # 공지사항은 제외
+            title_list = ['']*len(title_tags)
+            category_list = ['']*len(category_tags)
+            date_list = ['']*len(date_tags)
+            url_list = ['']*len(title_tags)
 
-        for idx, (title, category, date) in enumerate(zip(title_tags, category_tags, date_tags)):
-            title_list[idx] = title.attrs['title']
-            category_list[idx] = category.getText().strip()
-            date_list[idx] = date.getText().strip()
-            url_list[idx] = self.base_url + title.attrs['href']
+            for idx, (title, category, date) in enumerate(zip(title_tags, category_tags, date_tags)):
+                title_list[idx] = title.attrs['title']
+                category_list[idx] = category.getText().strip()
+                date_list[idx] = date.getText().strip()
+                url_list[idx] = self.base_url + title.attrs['href']
 
-        temp_df = pd.DataFrame({
-            'title':title_list,
-            'category':category_list,
-            'date' : date_list,
-            'url' : url_list
-        })
+            temp_df = pd.DataFrame({
+                'title':title_list,
+                'category':category_list,
+                'date' : date_list,
+                'url' : url_list
+            })
+                
+            # 각 page 크롤링 
+            content_list = []
+            for url in temp_df['url']:
+                content = self.page_scraping(url)
+                content_list.append(content)
+                
+            temp_df['content'] = content_list
+        except Exception as e:
+            print("An error occurred during scraping:", e)
+            temp_df = pd.DataFrame(columns = ['title','category','date', 'url', 'content'])
             
-        # 각 page 크롤링 
-        content_list = []
-        for url in temp_df['url']:
-            content = self.page_scraping(url)
-            content_list.append(content)
-            
-        temp_df['content'] = content_list
-
         return temp_df
 
     def page_scraping(self, page_url):
@@ -111,8 +128,8 @@ class Scraper:
         try:
             result = self.get_content(soup)
         except Exception as e:
-            print(e, page_url)
-            result = ""
+            print("An error occurred during page scraping:", e)
+            return ""
         return result
     
     
