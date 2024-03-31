@@ -5,7 +5,8 @@ import wget
 import pandas as pd
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
-from utils import remove_html_tags, html_table_to_markdown
+from imageprocessor import ImageProcessor
+from omegaconf import OmegaConf
 
 MAX_RETRIES = 3
 
@@ -17,6 +18,9 @@ class Scraper:
         self.page_step = args.page_step
         self.df = None
 
+        conf = OmegaConf.load("api_key.yaml")
+        self.imgProcessor = ImageProcessor(conf["API_SECRET_KEY"], conf["OCR_URL"])        
+        
         if not os.path.exists('cache'):
             os.mkdir('cache')
         if not os.path.exists('docs'):
@@ -31,6 +35,10 @@ class Scraper:
                 if retry == MAX_RETRIES - 1:
                     raise e
                 print(f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
+
+        file_name = self.base_url.split('/')[-1].split('.')[0]
+        self.df.to_csv(f'./{file_name}.csv', encoding='utf8', index=False)
+        
 
     def _scraping_routine(self):
         file_name = self.base_url.split('/')[-1].split('.')[0]
@@ -49,8 +57,7 @@ class Scraper:
             print(page_num)
             try:
                 with Pool(4) as pool:
-                    singleThread_dfs = pool.map(self.single_thread_scraping,
-                                                [page_num + i * self.page_step for i in range(self.num_workers)])
+                    singleThread_dfs = pool.map(self.single_thread_scraping, [page_num + i * self.page_step for i in range(self.num_workers)])
                     pool.close()
                     pool.join()
 
@@ -139,15 +146,29 @@ class Scraper:
     def get_content(self, soup):
         content = soup.select(".board-contents")[0]
         tables = content.select(".board-contents table")
-        content = str(content)
+        tablesintables = content.select(".board-contents table table")
+        tables[:] = [x for x in tables if x not in tablesintables]
 
+        imgs = content.select(".board-contents img")
+        content = str(content)
+            
         for table in tables:
-            markdown_table = html_table_to_markdown(table)
+            markdown_table = self.html_table_to_markdown(table)
             s1 = re.search('<table[^>]+>', content)
             s2 = re.search('</table>', content)
             content = content.replace(content[s1.start():s2.end()], markdown_table)
 
-        content_text = remove_html_tags(content)
+        for img in imgs:
+            image_url = img.attrs['src']
+            if re.search('cms/', image_url):
+                if not re.search('https://www.kumoh.ac.kr/',image_url):
+                    image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
+            
+            s1 = re.search('<img[^>]+>', content)
+            ocrText = self.imgProcessor.image_to_content(image_url)
+            content = content.replace(content[s1.start():s1.end()], ocrText)
+
+        content_text = self.remove_html_tags(content)
         return content_text
     
 
@@ -158,3 +179,39 @@ class Scraper:
             file_name = f'./docs/{doc.getText().strip()}'
             if not os.path.exists(file_name):
                 wget.download(file_url, out=file_name)
+
+    
+    def remove_html_tags(self, html_text):
+        # p 태그 처리
+        html_text = re.sub(r'<p\s*>', '', html_text)
+        html_text = re.sub(r'</p\s*>', '\n', html_text)
+
+        # br 태그 처리
+        html_text = re.sub(r'<br\s*/?\s*>', '\n', html_text)
+
+        # 나머지 태그 처리
+        content_text = BeautifulSoup(html_text, 'html.parser').getText(separator=" ")
+
+        # 이후 후처리
+        content_text = re.sub(r'\xa0+', ' ', content_text)
+        content_text = re.sub(r'\r?\n *', '\n', content_text)
+        content_text = re.sub(r'\n *\n+', '\n\n', content_text)
+        content_text = re.sub(r'\ +', ' ', content_text).strip()
+
+        return content_text
+
+    def html_table_to_markdown(self, table):
+        rows = table.find_all('tr')
+
+        markdown_table = ''
+
+        for idx, row in enumerate(rows):
+            cells = row.find_all(['th', 'td'])
+            row_data = [cell.get_text().strip() for cell in cells]
+            markdown_table += '| ' + ' | '.join(row_data) + ' |\n'
+            if idx == 0:
+                markdown_table += '| ' + ':-- | ' * len(cells) + '\n'
+        return markdown_table
+    
+
+
