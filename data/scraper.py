@@ -146,9 +146,12 @@ class Scraper:
     def get_content(self, soup):
         content = soup.select(".board-contents")[0]
         tables = content.select(".board-contents table")
+        tablesintables = content.select(".board-contents table table")
+        tables[:] = [x for x in tables if x not in tablesintables]
+
         imgs = content.select(".board-contents img")
         content = str(content)
-
+            
         for table in tables:
             markdown_table = self.html_table_to_markdown(table)
             s1 = re.search('<table[^>]+>', content)
@@ -202,11 +205,6 @@ class Scraper:
 
         markdown_table = ''
 
-        if len(rows) == 1:
-            cells = rows[0].find_all(['th', 'td'])
-            if len(cells) == 1:
-                return str(table)
-
         for idx, row in enumerate(rows):
             cells = row.find_all(['th', 'td'])
             row_data = [cell.get_text().strip() for cell in cells]
@@ -214,3 +212,6 @@ class Scraper:
             if idx == 0:
                 markdown_table += '| ' + ':-- | ' * len(cells) + '\n'
         return markdown_table
+    
+
+
