@@ -157,8 +157,9 @@ class Scraper:
 
         for img in imgs:
             image_url = img.attrs['src']
-            if not re.search('https://www.kumoh.ac.kr/',image_url):
-                image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
+            if re.search('cms/', image_url):
+                if not re.search('https://www.kumoh.ac.kr/',image_url):
+                    image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
             
             s1 = re.search('<img[^>]+>', content)
             ocrText = self.imgProcessor.image_to_content(image_url)
