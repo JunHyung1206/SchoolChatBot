@@ -18,7 +18,7 @@ class ImageProcessor:
             content = {
                 "images": [
                     {
-                        "format": "jpg",
+                        "format": "png",
                         "name": "test",
                         "data": None,
                         "url": image_url
@@ -37,6 +37,7 @@ class ImageProcessor:
             return result
         except requests.exceptions.RequestException as e:
             print(f"OCR 요청 실패: {e}")
+            print(image_url)
             return None
 
     def get_text(self, df):
