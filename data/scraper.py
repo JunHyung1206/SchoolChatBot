@@ -37,7 +37,7 @@ class Scraper:
                 print(f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
 
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        self.df.to_csv(f'./cache/{file_name}.csv', encoding='utf8', index=False)
+        self.df.to_csv(f'./{file_name}.csv', encoding='utf8', index=False)
         
 
     def _scraping_routine(self):
