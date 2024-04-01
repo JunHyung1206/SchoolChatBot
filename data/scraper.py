@@ -21,6 +21,8 @@ class Scraper:
         conf = OmegaConf.load("api_key.yaml")
         self.imgProcessor = ImageProcessor(conf["API_SECRET_KEY"], conf["OCR_URL"])        
         
+        if not os.path.exists('datasets'):
+            os.mkdir('datasets')    
         if not os.path.exists('cache'):
             os.mkdir('cache')
         if not os.path.exists('docs'):
@@ -37,7 +39,7 @@ class Scraper:
                 print(f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
 
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        self.df.to_csv(f'./{file_name}.csv', encoding='utf8', index=False)
+        self.df.to_csv(f'./datasets/{file_name}.csv', encoding='utf8', index=False)
         
 
     def _scraping_routine(self):
