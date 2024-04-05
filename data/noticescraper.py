@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 
 MAX_RETRIES = 3
 
-class Scraper:
+class NoticeScraper:
     def __init__(self, args):
         self.args = args
         self.base_url = args.url

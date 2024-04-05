@@ -1,5 +1,5 @@
 import argparse
-from scraper import Scraper
+from data.noticescraper import NoticeScraper
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -10,5 +10,5 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    s = Scraper(args)
+    s = NoticeScraper(args)
     s.scraping()
