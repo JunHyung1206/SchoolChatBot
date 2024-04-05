@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from multiprocessing import Pool
 from imageprocessor import ImageProcessor
 from omegaconf import OmegaConf
+from utils import remove_html_tags, html_table_to_markdown
 
 MAX_RETRIES = 3
 
@@ -155,7 +156,7 @@ class NoticeScraper:
         content = str(content)
             
         for table in tables:
-            markdown_table = self.html_table_to_markdown(table)
+            markdown_table = html_table_to_markdown(table)
             s1 = re.search('<table[^>]+>', content)
             s2 = re.search('</table>', content)
             content = content.replace(content[s1.start():s2.end()], markdown_table)
@@ -170,7 +171,7 @@ class NoticeScraper:
             ocrText = self.imgProcessor.image_to_content(image_url)
             content = content.replace(content[s1.start():s1.end()], ocrText)
 
-        content_text = self.remove_html_tags(content)
+        content_text = remove_html_tags(content)
         return content_text
     
 
@@ -181,39 +182,5 @@ class NoticeScraper:
             file_name = f'./docs/{doc.getText().strip()}'
             if not os.path.exists(file_name):
                 wget.download(file_url, out=file_name)
-
-    
-    def remove_html_tags(self, html_text):
-        # p 태그 처리
-        html_text = re.sub(r'<p\s*>', '', html_text)
-        html_text = re.sub(r'</p\s*>', '\n', html_text)
-
-        # br 태그 처리
-        html_text = re.sub(r'<br\s*/?\s*>', '\n', html_text)
-
-        # 나머지 태그 처리
-        content_text = BeautifulSoup(html_text, 'html.parser').getText(separator=" ")
-
-        # 이후 후처리
-        content_text = re.sub(r'\xa0+', ' ', content_text)
-        content_text = re.sub(r'\r?\n *', '\n', content_text)
-        content_text = re.sub(r'\n *\n+', '\n\n', content_text)
-        content_text = re.sub(r'\ +', ' ', content_text).strip()
-
-        return content_text
-
-    def html_table_to_markdown(self, table):
-        rows = table.find_all('tr')
-
-        markdown_table = ''
-
-        for idx, row in enumerate(rows):
-            cells = row.find_all(['th', 'td'])
-            row_data = [cell.get_text().strip() for cell in cells]
-            markdown_table += '| ' + ' | '.join(row_data) + ' |\n'
-            if idx == 0:
-                markdown_table += '| ' + ':-- | ' * len(cells) + '\n'
-        return markdown_table
-    
 
 
