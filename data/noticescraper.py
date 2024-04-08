@@ -43,7 +43,7 @@ class NoticeScraper:
                     f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
 
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        self.df.to_csv(f'./datasets/{file_name}.csv',
+        self.df.to_csv(f'../datasets/{file_name}.csv',
                        encoding='utf8', index=False)
 
     def _scraping_routine(self):
@@ -195,3 +195,62 @@ class NoticeScraper:
             file_name = f'./docs/{doc.getText().strip()}'
             if not os.path.exists(file_name):
                 wget.download(file_url, out=file_name)
+
+
+class FAQScraper:
+    def __init__(self, args):
+        self.args = args
+        self.base_url = args.url
+        self.num_workers = args.num_workers
+        self.page_step = args.page_step
+        self.df = None
+
+    def scraping(self):
+        page_step = 10
+        page_num = 0
+        self.df = pd.DataFrame(columns=['question', 'answer'])
+        while (True):
+            request_url = self.base_url + \
+                f'?mode=list&&articleLimit={page_step}&article.offset={page_num}'
+            response = requests.get(request_url
+                                    )
+            soup = BeautifulSoup(response.content, 'html.parser')
+            temp_df = self.page_scraping(soup)
+            self.df = pd.concat([self.df, temp_df])
+            self.df.reset_index(drop=True, inplace=True)
+            page_num += page_step
+            if (len(temp_df) < page_step):
+                break
+        file_name = self.base_url.split('/')[-1].split('.')[0]
+        self.df.to_csv(f'../datasets/{file_name}.csv',
+                       encoding='utf8', index=False)
+
+    def page_scraping(self, soup):
+        question_list = []
+        answer_list = []
+        qna_pair = soup.select('div.faq-wrapper dl')
+        for i in qna_pair:
+            question = i.find('dt')
+            answer = i.find('dd')
+
+            question = self.get_content(question)
+            answer = self.get_content(answer)
+
+            question_list.append(question)
+            answer_list.append(answer)
+
+        df = pd.DataFrame({'question': question_list, 'answer': answer_list})
+        return df
+
+    def get_content(self, content):
+        tables = content.select('table')
+        content = str(content)
+        for table in tables:
+            markdown_table = html_table_to_markdown(table)
+            s1 = re.search('<table', content)
+            s2 = re.search('</table>', content)
+            content = content.replace(
+                content[s1.start():s2.end()], markdown_table)
+
+        content = remove_html_tags(content)
+        return content
