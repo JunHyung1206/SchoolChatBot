@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from multiprocessing import Pool
 from imageprocessor import ImageProcessor
 from omegaconf import OmegaConf
-from utils import remove_html_tags, html_table_to_markdown
+from utils import remove_html_tags, html_table_to_markdown, get_table_tags
 
 MAX_RETRIES = 3
 
@@ -43,7 +43,7 @@ class NoticeScraper:
                     f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
 
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        self.df.to_csv(f'../datasets/{file_name}.csv',
+        self.df.to_csv(f'./datasets/{file_name}.csv',
                        encoding='utf8', index=False)
 
     def _scraping_routine(self):
@@ -170,20 +170,19 @@ class NoticeScraper:
 
         for table in tables:
             markdown_table = html_table_to_markdown(table)
-            s1 = re.search('<table', content)
-            s2 = re.search('</table>', content)
+            s1, s2 = get_table_tags(content)
             content = content.replace(
                 content[s1.start():s2.end()], markdown_table)
 
-        for img in imgs:
-            image_url = img.attrs['src']
-            if re.search('cms/', image_url):
-                if not re.search('https://www.kumoh.ac.kr/', image_url):
-                    image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
+        # for img in imgs:
+        #     image_url = img.attrs['src']
+        #     if re.search('cms/', image_url):
+        #         if not re.search('https://www.kumoh.ac.kr/', image_url):
+        #             image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
 
-            s1 = re.search('<img[^>]+>', content)
-            ocrText = self.imgProcessor.image_to_content(image_url)
-            content = content.replace(content[s1.start():s1.end()], ocrText)
+        #     s1 = re.search('<img[^>]+>', content)
+        #     ocrText = self.imgProcessor.image_to_content(image_url)
+        #     content = content.replace(content[s1.start():s1.end()], ocrText)
 
         content_text = remove_html_tags(content)
         return content_text
@@ -246,8 +245,7 @@ class FAQScraper:
         content = str(content)
         for table in tables:
             markdown_table = html_table_to_markdown(table)
-            s1 = re.search('<table', content)
-            s2 = re.search('</table>', content)
+            s1, s2 = get_table_tags(content)
             content = content.replace(
                 content[s1.start():s2.end()], markdown_table)
 
