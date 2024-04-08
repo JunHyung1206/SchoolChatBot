@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
 import math
 
+
 class ImageProcessor:
     def __init__(self, api_secret_key, ocr_url):
         self.api_secret_key = api_secret_key
@@ -31,7 +32,8 @@ class ImageProcessor:
                 "version": "V2"
             }
 
-            response = requests.post(self.ocr_url, json=content, headers=header)
+            response = requests.post(
+                self.ocr_url, json=content, headers=header)
             response.raise_for_status()  # 요청 실패 시 예외 발생
             result = response.json()
             return result
@@ -93,7 +95,8 @@ class ImageProcessor:
 
         if result['images'][0]['inferResult'] == 'SUCCESS':
             fields = result['images'][0]['fields']
-            df = pd.DataFrame([i['boundingPoly']['vertices'][0] for i in fields])
+            df = pd.DataFrame([i['boundingPoly']['vertices'][0]
+                              for i in fields])
             df['text'] = [i['inferText'] for i in fields]
             df = self.find_optimal_clusters(df, max_clusters=5)
             content = ""
