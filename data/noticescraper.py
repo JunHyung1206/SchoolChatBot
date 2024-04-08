@@ -157,7 +157,7 @@ class NoticeScraper:
             
         for table in tables:
             markdown_table = html_table_to_markdown(table)
-            s1 = re.search('<table[^>]+>', content)
+            s1 = re.search('<table', content)
             s2 = re.search('</table>', content)
             content = content.replace(content[s1.start():s2.end()], markdown_table)
 
