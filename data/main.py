@@ -1,5 +1,14 @@
 import argparse
-from noticescraper import NoticeScraper
+from scraper import NoticeScraper, FAQScraper
+
+path_Scarper = {
+    "sub06_01_01_01": "NoticeScraper",
+    "sub06_01_01_03": "NoticeScraper",
+    "sub02_03_02_01": "FAQScraper",
+    "sub02_03_02_02": "FAQScraper",
+    "sub02_03_02_03": "FAQScraper",
+    "sub02_03_02_04": "FAQScraper",
+}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -13,6 +22,7 @@ if __name__ == '__main__':
                         help="docs download")
 
     args = parser.parse_args()
+    file_name = args.url.split('/')[-1].split('.')[0]
 
-    s = NoticeScraper(args)
+    s = globals()[path_Scarper[file_name]](args)
     s.scraping()
