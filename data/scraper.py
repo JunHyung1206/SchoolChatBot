@@ -206,20 +206,19 @@ class FAQScraper:
         self.df = None
 
     def scraping(self):
-        page_step = 10
         page_num = 0
         self.df = pd.DataFrame(columns=['question', 'answer'])
         while (True):
             request_url = self.base_url + \
-                f'?mode=list&&articleLimit={page_step}&article.offset={page_num}'
+                f'?mode=list&&articleLimit={self.page_step}&article.offset={page_num}'
             response = requests.get(request_url
                                     )
             soup = BeautifulSoup(response.content, 'html.parser')
             temp_df = self.page_scraping(soup)
             self.df = pd.concat([self.df, temp_df])
             self.df.reset_index(drop=True, inplace=True)
-            page_num += page_step
-            if (len(temp_df) < page_step):
+            page_num += self.page_step
+            if (len(temp_df) < self.page_step):
                 break
         file_name = self.base_url.split('/')[-1].split('.')[0]
         self.df.to_csv(f'../datasets/{file_name}.csv',
@@ -254,3 +253,49 @@ class FAQScraper:
 
         content = remove_html_tags(content)
         return content
+
+
+class GuideScraper(FAQScraper):
+    def __init__(self, args):
+        super().__init__(args)
+
+    def scraping(self):
+        self.df = pd.DataFrame(columns=['question', 'answer'])
+
+        request_url = self.base_url
+        response = requests.get(request_url
+                                )
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.df = self.page_scraping(soup)
+        self.df.reset_index(drop=True, inplace=True)
+
+        file_name = self.base_url.split('/')[-1].split('.')[0]
+        self.df.to_csv(f'../datasets/{file_name}.csv',
+                       encoding='utf8', index=False)
+
+    def page_scraping(self, soup):
+        question_list = []
+        answer_list = []
+        qna_pair = soup.select('.contents-area dl')
+        if len(qna_pair) != 0:
+            for i in qna_pair:
+                question = i.find('dt')
+                answer = i.find('dd')
+
+                question = self.get_content(question)
+                answer = self.get_content(answer)
+
+                question_list.append(question)
+                answer_list.append(answer)
+
+        else:
+            contents = soup.select('.contents-area')
+            for content in contents:
+                title = content.find('h4').getText().strip()
+                content_text = self.get_content(content)
+                question_list.append(title)
+                answer_list.append(content_text)
+
+        df = pd.DataFrame(
+            {'question': question_list, 'answer': answer_list})
+        return df

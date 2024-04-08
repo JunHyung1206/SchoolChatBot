@@ -1,13 +1,21 @@
 import argparse
-from scraper import NoticeScraper, FAQScraper
+from scraper import NoticeScraper, FAQScraper, GuideScraper
 
 path_Scarper = {
-    "sub06_01_01_01": "NoticeScraper",
-    "sub06_01_01_03": "NoticeScraper",
     "sub02_03_02_01": "FAQScraper",
     "sub02_03_02_02": "FAQScraper",
     "sub02_03_02_03": "FAQScraper",
     "sub02_03_02_04": "FAQScraper",
+    "sub02_03_03_01": "GuideScraper",
+    "sub02_03_03_02": "GuideScraper",
+    "sub02_03_03_03": "GuideScraper",
+    "sub02_03_03_04": "GuideScraper",
+    "sub02_03_03_05": "GuideScraper",
+    "sub02_03_03_06": "GuideScraper",
+    "sub02_03_03_07": "GuideScraper",
+    "sub02_03_03_08": "GuideScraper",
+    "sub06_01_01_01": "NoticeScraper",
+    "sub06_01_01_03": "NoticeScraper",
 }
 
 if __name__ == '__main__':
