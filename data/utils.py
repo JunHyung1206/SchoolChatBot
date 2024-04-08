@@ -35,3 +35,16 @@ def html_table_to_markdown(table):
         if idx == 0:
             markdown_table += '| ' + ':-- | ' * len(cells) + '\n'
     return markdown_table
+
+
+def get_table_tags(content):
+    s1 = re.finditer('(<table|</table>)', content)
+    stack = []
+    for i in s1:
+        if content[i.start():i.end()] == '<table':
+            stack.append(i)
+        else:
+            start = stack.pop()
+            if len(stack) == 0:
+                end = i
+                return start, end
