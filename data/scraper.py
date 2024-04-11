@@ -150,7 +150,6 @@ class NoticeScraper:
         soup = BeautifulSoup(response.content, 'html.parser')
         if self.args.docs:
             self.get_docs(soup)
-
         try:
             result = self.get_content(soup)
         except Exception as e:
@@ -174,15 +173,15 @@ class NoticeScraper:
             content = content.replace(
                 content[s1.start():s2.end()], markdown_table)
 
-        # for img in imgs:
-        #     image_url = img.attrs['src']
-        #     if re.search('cms/', image_url):
-        #         if not re.search('https://www.kumoh.ac.kr/', image_url):
-        #             image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
+        for img in imgs:
+            image_url = img.attrs['src']
+            if re.search('cms/', image_url):
+                if not re.search('https://www.kumoh.ac.kr/', image_url):
+                    image_url = 'https://www.kumoh.ac.kr/'+img.attrs['src']
 
-        #     s1 = re.search('<img[^>]+>', content)
-        #     ocrText = self.imgProcessor.image_to_content(image_url)
-        #     content = content.replace(content[s1.start():s1.end()], ocrText)
+            s1 = re.search('<img[^>]+>', content)
+            ocrText = self.imgProcessor.image_to_content(image_url)
+            content = content.replace(content[s1.start():s1.end()], ocrText)
 
         content_text = remove_html_tags(content)
         return content_text
