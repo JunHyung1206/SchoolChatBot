@@ -1,11 +1,12 @@
 import argparse
-from scraper import NoticeScraper, FAQScraper, GuideScraper
+from scraper import NoticeScraper, FAQScraper, GuideScraper, QnAScraper
 
 path_Scarper = {
     "sub02_03_02": "FAQScraper",
     "sub02_03_03": "GuideScraper",
     "sub02_03_04": "GuideScraper",
     "sub06_01_01": "NoticeScraper",
+    "sub06_03_02": "QnAScraper"
 }
 
 if __name__ == '__main__':
@@ -21,6 +22,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     file_name = args.url.split('/')[-1].split('.')[0]
-    category = '_'.join(file_name.split('_')[0:-1])
+    category = '_'.join(file_name.split('_')[0:3])
     s = globals()[path_Scarper[category]](args)
     s.scraping()

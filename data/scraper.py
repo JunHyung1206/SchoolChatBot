@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import requests
 import wget
 import pandas as pd
@@ -8,6 +9,9 @@ from multiprocessing import Pool
 from imageprocessor import ImageProcessor
 from omegaconf import OmegaConf
 from utils import remove_html_tags, html_table_to_markdown, get_table_tags
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 
 MAX_RETRIES = 3
 
@@ -296,3 +300,70 @@ class GuideScraper(FAQScraper):
         df = pd.DataFrame(
             {'question': question_list, 'answer': answer_list})
         return df
+
+
+class QnAScraper():
+    def __init__(self, args):
+        self.base_url = args.url
+        self.LOGIN_INFO = OmegaConf.load('login_info.yaml')
+
+        self.df = pd.DataFrame(columns=['title', 'date', 'question', 'answer'])
+
+    def scraping(self):
+        driver = webdriver.Chrome()
+
+        # 페이지 접속 및 로그인
+        driver.get(self.base_url)
+        driver.find_element(
+            by=By.XPATH, value='//*[@id="member_id"]').send_keys(self.LOGIN_INFO['ID'])  # id
+        driver.find_element(
+            by=By.XPATH, value='//*[@id="member_pw"]').send_keys(self.LOGIN_INFO['PW'])  # pw
+        driver.find_element(
+            by=By.XPATH, value='//*[@id="loginForm"]/fieldset/div/input').click()
+        time.sleep(2)
+
+        # 테이블의 제일 첫번째 요소 클릭
+        driver.find_element(
+            by=By.CSS_SELECTOR, value='#jwxe_main_content > div.contents-wrapper > div > div.board-list01 > table > tbody > tr:nth-child(7) > td.title.left').click()
+
+        idx = 0
+        while (True):
+            try:
+                # 각각의 요소 뽑아내기
+                time.sleep(3)
+                url = driver.current_url
+                title = driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[1]/div[1]/div[1]').text
+                date = driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[1]/div[1]/div[2]/dl[3]/dd').text
+                question = driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[1]/div[1]/div[3]/pre').text
+                answer = driver.find_element(
+                    by=By.CLASS_NAME, value='board-reply-txt.board-common-txt.ng-binding.ng-scope').text
+
+                self.df.loc[idx] = {'title': title, 'date': date,
+                                    'question': question, 'answer': answer, 'url': url}
+                idx += 1
+
+                prev_title = driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[2]/a[1]/dl/dd').text
+
+                if prev_title == "이전글이 없습니다.":
+                    break
+
+                # 이전 글로 넘어가기
+                driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[2]/a[1]').click()
+                time.sleep(3)
+            except Exception:
+                print(title, url)
+                # 이전 글로 넘어가기
+                driver.find_element(
+                    by=By.XPATH, value='//*[@id="jwxe_main_content"]/div[2]/div/div[2]/a[1]').click()
+                time.sleep(3)
+                continue
+        driver.quit()
+
+        file_name = self.base_url.split('/')[-1].split('.')[0]
+        self.df.to_csv(f'../datasets/{file_name}.csv',
+                       encoding='utf8', index=False)
