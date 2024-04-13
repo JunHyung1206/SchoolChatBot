@@ -28,11 +28,11 @@ class NoticeScraper:
         self.imgProcessor = ImageProcessor(
             conf["API_SECRET_KEY"], conf["OCR_URL"])
 
-        if not os.path.exists('datasets'):
-            os.mkdir('datasets')
-        if not os.path.exists('cache'):
+        if not os.path.exists('../datasets'):
+            os.mkdir('../datasets')
+        if not os.path.exists('../datasets/cache'):
             os.mkdir('cache')
-        if not os.path.exists('docs'):
+        if not os.path.exists('../datasets/docs'):
             os.mkdir('docs')
 
     def scraping(self):
@@ -47,14 +47,14 @@ class NoticeScraper:
                     f"An error occurred during scraping: {e}. Retrying... (Retry {retry + 1}/{MAX_RETRIES})")
 
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        self.df.to_csv(f'./datasets/{file_name}.csv',
+        self.df.to_csv(f'../datasets/{file_name}.csv',
                        encoding='utf8', index=False)
 
     def _scraping_routine(self):
         file_name = self.base_url.split('/')[-1].split('.')[0]
-        if os.path.exists(f'./cache/{file_name}_cache.csv'):
+        if os.path.exists(f'../datasets/cache/{file_name}_cache.csv'):
             self.df = pd.read_csv(
-                f'./cache/{file_name}_cache.csv', encoding='utf8')
+                f'../datasets/cache/{file_name}_cache.csv', encoding='utf8')
         else:
             self.df = pd.DataFrame(
                 columns=['title', 'category', 'date', 'url', 'content'])
@@ -91,7 +91,7 @@ class NoticeScraper:
             self.df = pd.concat([self.df, step_df])
             self.df.reset_index(inplace=True, drop=True)
             self.df.to_csv(
-                f'./cache/{file_name}_cache.csv', encoding='utf8', index=False)
+                f'../datasets/cache/{file_name}_cache.csv', encoding='utf8', index=False)
         self.df.reset_index(inplace=True, drop=True)
 
     def single_thread_scraping(self, page_num):
@@ -197,6 +197,91 @@ class NoticeScraper:
             file_name = f'./docs/{doc.getText().strip()}'
             if not os.path.exists(file_name):
                 wget.download(file_url, out=file_name)
+
+
+class ComputerEngineeringNoticeScraper(NoticeScraper):
+    def __init__(self, args):
+        super().__init__(args)
+
+    def _scraping_routine(self):
+        file_name = self.base_url.split('/')[-1].split('.')[0]
+        if os.path.exists(f'../datasets/cache/{file_name}_cache.csv'):
+            self.df = pd.read_csv(
+                f'../datasets/cache/{file_name}_cache.csv', encoding='utf8')
+        else:
+            self.df = pd.DataFrame(
+                columns=['title', 'date', 'url', 'content'])
+
+        total_page_step = self.page_step * self.num_workers
+        page_num = len(self.df) // total_page_step * total_page_step
+
+        while True:
+            print(page_num)
+            try:
+                with Pool(4) as pool:
+                    singleThread_dfs = pool.map(self.single_thread_scraping, [
+                                                page_num + i * self.page_step for i in range(self.num_workers)])
+                    pool.close()
+                    pool.join()
+
+            except Exception as e:
+                print(f"An error occurred during multi-threading: {e}")
+                raise e
+
+            step_df = pd.DataFrame(
+                columns=['title', 'date', 'url', 'content'])
+            for sdf in singleThread_dfs:
+                step_df = pd.concat([step_df, sdf])
+
+            if len(step_df) == 0:
+                break
+
+            page_num += total_page_step
+            self.df = pd.concat([self.df, step_df])
+            self.df.reset_index(inplace=True, drop=True)
+            self.df.to_csv(
+                f'../datasets/cache/{file_name}_cache.csv', encoding='utf8', index=False)
+        self.df.reset_index(inplace=True, drop=True)
+
+    def _single_thread_scraping_routine(self, page_num):
+        list_url = self.base_url + \
+            f'?mode=list&&articleLimit={self.page_step}&article.offset={page_num}'
+        response = requests.get(list_url)
+
+        if response.status_code == 500:
+            raise Exception(
+                f"500 Internal Server Error for {list_url}. Maximum retries exceeded.")
+        elif response.status_code != 200:
+            raise Exception(
+                f"Failed to fetch the page {list_url}. Status code: {response.status_code}")
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        title_tags = soup.select('td.title.left')
+        date_tags = soup.select('td.date')
+
+        title_list = ['']*len(title_tags)
+        date_list = ['']*len(date_tags)
+        url_list = ['']*len(title_tags)
+
+        for idx, (title, date) in enumerate(zip(title_tags, date_tags)):
+            title_list[idx] = title.select_one(
+                '.title-wrapper').getText().strip()
+            date_list[idx] = date.getText().strip()
+            url_list[idx] = self.base_url + title.a['href']
+
+        temp_df = pd.DataFrame({
+            'title': title_list,
+            'date': date_list,
+            'url': url_list
+        })
+
+        content_list = []
+        for url in temp_df['url']:
+            content = self.page_scraping(url)
+            content_list.append(content)
+
+        temp_df['content'] = content_list
+        return temp_df
 
 
 class FAQScraper:

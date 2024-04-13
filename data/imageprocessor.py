@@ -13,6 +13,11 @@ class ImageProcessor:
         self.ocr_url = ocr_url
 
     def send_ocr_request(self, image_url):
+        data = None
+
+        if image_url.find('data:image/png;base64') != -1:
+            data = image_url.split(",")[-1]
+            image_url = None
         try:
             timestamp = datetime.now().microsecond
             header = {"X-OCR-SECRET": self.api_secret_key}
@@ -21,7 +26,7 @@ class ImageProcessor:
                     {
                         "format": "png",
                         "name": "test",
-                        "data": None,
+                        "data": data,
                         "url": image_url
                     }
                 ],

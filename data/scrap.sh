@@ -28,4 +28,4 @@
 #     --num_workers 4
 # done
 
-python main.py -l https://www.kumoh.ac.kr/ko/sub06_03_02.do
+python main.py -l https://ce.kumoh.ac.kr/ce/sub0501.do --num_workers 4
