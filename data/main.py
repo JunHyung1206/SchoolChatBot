@@ -1,5 +1,5 @@
 import argparse
-from scraper import NoticeScraper, ComputerEngineeringNoticeScraper, FAQScraper, GuideScraper, QnAScraper
+from scraper import NoticeScraper, ComputerEngineeringNoticeScraper, FAQScraper, GuideScraper, QnAScraper, LibraryNoticeScraper
 
 path_Scarper = {
     "sub02_03_02": "FAQScraper",
@@ -7,7 +7,8 @@ path_Scarper = {
     "sub02_03_04": "GuideScraper",
     "sub06_01_01": "NoticeScraper",
     "sub06_03_02": "QnAScraper",
-    "sub0501": "ComputerEngineeringNoticeScraper"
+    "sub0501": "ComputerEngineeringNoticeScraper",
+    'notice': "LibraryNoticeScraper"
 }
 
 if __name__ == '__main__':
