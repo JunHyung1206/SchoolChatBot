@@ -5,6 +5,8 @@ path_Scarper = {
     "sub02_03_02": "FAQScraper",
     "sub02_03_03": "GuideScraper",
     "sub02_03_04": "GuideScraper",
+    "sub02_05_01": "GuideScraper",
+    "sub02_05_02": "GuideScraper",
     "sub06_01_01": "NoticeScraper",
     "sub06_03_02": "QnAScraper",
     "sub0501": "ComputerEngineeringNoticeScraper",

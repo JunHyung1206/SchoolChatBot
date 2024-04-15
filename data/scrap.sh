@@ -30,4 +30,18 @@
 
 # python main.py -l https://ce.kumoh.ac.kr/ce/sub0501.do --num_workers 4
 
-python main.py -l https://library.kumoh.ac.kr/#/bbs/notice
+# python main.py -l https://library.kumoh.ac.kr/#/bbs/notice
+
+# for((i=1;i<4;i++))
+# do
+#     python main.py \
+#     -l https://www.kumoh.ac.kr/ko/sub02_05_01_0$i.do \
+#     --num_workers 4
+# done
+
+for((i=1;i<4;i++))
+do
+    python main.py \
+    -l https://www.kumoh.ac.kr/ko/sub02_05_02_0$i.do \
+    --num_workers 4
+done
