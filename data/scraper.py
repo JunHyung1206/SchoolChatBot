@@ -72,7 +72,7 @@ class NoticeScraper:
         while True:
             print(page_num)
             try:
-                with Pool(4) as pool:
+                with Pool(self.args.num_workers) as pool:
                     singleThread_dfs = pool.map(self.single_thread_scraping, [
                                                 page_num + i * self.page_step for i in range(self.num_workers)])
                     pool.close()
@@ -221,7 +221,7 @@ class ComputerEngineeringNoticeScraper(NoticeScraper):
         while True:
             print(page_num)
             try:
-                with Pool(4) as pool:
+                with Pool(self.args.num_workers) as pool:
                     singleThread_dfs = pool.map(self.single_thread_scraping, [
                                                 page_num + i * self.page_step for i in range(self.num_workers)])
                     pool.close()
