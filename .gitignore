@@ -167,8 +167,10 @@ cython_debug/
 
 lightning_logs
 
+# macos
+.DS_Store
 
-
+# Develope folder
 .vscode-server
 .nv
 .local
