@@ -4,7 +4,7 @@ from langchain_community.embeddings.sentence_transformer import SentenceTransfor
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-DB_PATH = './vector_DB'
+DB_PATH = '../vector_DB'
 
 loader = CSVLoader(file_path='../datasets/datasets.csv', encoding= 'utf8', metadata_columns = ['id', 'title', 'category', 'url', 'source', 'date'] )
 documents = loader.load()
