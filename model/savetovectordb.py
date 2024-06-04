@@ -20,5 +20,5 @@ db = Chroma.from_documents(
     docs,
     embedding_function,
     collection_name = 'school_docs',
-    persist_directory=DB_PATH
+    persist_directory = DB_PATH
     )
