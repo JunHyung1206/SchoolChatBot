@@ -173,6 +173,5 @@ right :
 {context}
 </Context>
 
-
 query : {question}
 '''
